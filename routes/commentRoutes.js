@@ -1,30 +1,46 @@
+// routes/commentRoutes.js
 const express = require("express");
 const Comment = require("../models/Comment");
 const router = express.Router();
 
-// GET all comments for a specific recipe
-router.get("/recipe/:recipeId", async (req, res) => {
+// GET all comments for a post
+router.get("/:postId", async (req, res) => {
   try {
-    const comments = await Comment.find({ recipe: req.params.recipeId });
+    const comments = await Comment.find({ post: req.params.postId }).populate(
+      "user"
+    );
     res.json(comments);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).send("Server error");
   }
 });
 
-// POST a new comment
+// CREATE a new comment
 router.post("/", async (req, res) => {
-  const { recipe, text } = req.body;
+  const { content, user, post } = req.body;
   try {
-    const comment = new Comment({ recipe, text });
-    await comment.save();
-    res.status(201).json(comment);
+    const newComment = new Comment({ content, user, post });
+    await newComment.save();
+    res.status(201).json(newComment);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).send("Invalid input");
   }
 });
 
-// PATCH a comment
+// GET comment by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.id).populate("user");
+    if (!comment) {
+      return res.status(404).send("Comment not found");
+    }
+    res.json(comment);
+  } catch (err) {
+    res.status(500).send("Server error");
+  }
+});
+
+// UPDATE comment by ID
 router.patch("/:id", async (req, res) => {
   try {
     const updatedComment = await Comment.findByIdAndUpdate(
@@ -32,19 +48,25 @@ router.patch("/:id", async (req, res) => {
       req.body,
       { new: true }
     );
+    if (!updatedComment) {
+      return res.status(404).send("Comment not found");
+    }
     res.json(updatedComment);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).send("Invalid input");
   }
 });
 
-// DELETE a comment
+// DELETE comment by ID
 router.delete("/:id", async (req, res) => {
   try {
-    await Comment.findByIdAndDelete(req.params.id);
-    res.json({ message: "Comment deleted" });
+    const deletedComment = await Comment.findByIdAndDelete(req.params.id);
+    if (!deletedComment) {
+      return res.status(404).send("Comment not found");
+    }
+    res.json({ message: "Comment deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).send("Server error");
   }
 });
 
